@@ -33,7 +33,7 @@ P = center_data(X_train, mean_face)
 # PCA
 # ---------------------------------------
 
-eigenvalues, eigenfaces = compute_pca(P)
+eigenfaces, eigenvalues = compute_pca(P)
 
 
 # ---------------------------------------

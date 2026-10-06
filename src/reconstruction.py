@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # PCA
     # ---------------------------------------
 
-    eigenvalues, eigenfaces = compute_pca(P)
+    eigenfaces, eigenvalues = compute_pca(P)
 
     # ---------------------------------------
     # Reconstruct test faces

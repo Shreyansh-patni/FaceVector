@@ -14,10 +14,12 @@ def load_images(folder):
     Load all .pgm face images from a folder.
 
     Returns:
-        X: Face matrix
-           Shape = (number_of_pixels, number_of_images)
+        X:
+            Face matrix.
+            Shape = (number_of_pixels, number_of_images)
 
-        labels: Subject labels for each image
+        labels:
+            Subject label for each image.
     """
 
     image_files = sorted(folder.rglob("*.pgm"))
@@ -29,7 +31,6 @@ def load_images(folder):
 
         with Image.open(image_path) as img:
             img = img.convert("L")
-
             image_array = np.array(img, dtype=np.float64)
 
         # Convert 92 x 112 image into a 1D vector
@@ -37,17 +38,47 @@ def load_images(folder):
 
         images.append(vector)
 
-        # Parent folder is the subject, e.g. s1, s2, ...
+        # Parent folder = subject
         label = image_path.parent.name
         labels.append(label)
 
-    # Convert list of vectors into matrix
     X = np.column_stack(images)
 
     return X, labels
 
 
+def compute_mean_face(X):
+    """
+    Calculate the mean face.
+
+    X shape:
+        (pixels, images)
+
+    Returns:
+        mean_face shape:
+        (pixels,)
+    """
+
+    mean_face = np.mean(X, axis=1)
+
+    return mean_face
+
+
+def center_data(X, mean_face):
+    """
+    Subtract the mean face from every face.
+    """
+
+    centered = X - mean_face[:, np.newaxis]
+
+    return centered
+
+
 if __name__ == "__main__":
+
+    # -----------------------------
+    # Load dataset
+    # -----------------------------
 
     X_train, y_train = load_images(TRAINING_DIR)
 
@@ -60,12 +91,36 @@ if __name__ == "__main__":
     print(f"Training matrix shape : {X_train.shape}")
     print(f"Testing matrix shape  : {X_test.shape}")
 
-    print(f"\nTraining labels       : {len(y_train)}")
-    print(f"Testing labels        : {len(y_test)}")
+    # -----------------------------
+    # Mean face
+    # -----------------------------
 
-    print(f"\nPixels per image      : {X_train.shape[0]}")
-    print(f"Training images       : {X_train.shape[1]}")
-    print(f"Testing images        : {X_test.shape[1]}")
+    mean_face = compute_mean_face(X_train)
 
-    print("\nFirst training label  :", y_train[0])
-    print("First testing label   :", y_test[0])
+    print("\n" + "=" * 50)
+    print("MEAN FACE")
+    print("=" * 50)
+
+    print(f"Mean face shape       : {mean_face.shape}")
+    print(f"Mean pixel value      : {mean_face.mean():.2f}")
+    print(f"Minimum mean value    : {mean_face.min():.2f}")
+    print(f"Maximum mean value    : {mean_face.max():.2f}")
+
+    # -----------------------------
+    # Mean centering
+    # -----------------------------
+
+    P = center_data(X_train, mean_face)
+
+    print("\n" + "=" * 50)
+    print("MEAN CENTERING")
+    print("=" * 50)
+
+    print(f"Centered matrix shape : {P.shape}")
+
+    # Check that the mean of each pixel row
+    # is approximately zero after centering.
+    row_means = np.mean(P, axis=1)
+
+    print(f"Maximum absolute row mean after centering: "
+          f"{np.max(np.abs(row_means)):.10f}")

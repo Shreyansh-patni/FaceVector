@@ -113,40 +113,6 @@ $$\mathbf{\hat{x}} = \mathbf{\mu} + V \mathbf{w}$$
 
 ---
 
-## 🖼️ Visual Gallery
-
-### Project Overview & Metrics
-![Project Overview](docs/screenshots/01-project-overview.png)
-
-### Matrix Representation
-![Matrix Representation](docs/screenshots/02-matrix-representation.png)
-
-### Mean Face Computation
-![Mean Face](docs/screenshots/03-mean-face.png)
-
-### Mean Centering & $P^T P$ Gram Matrix
-![PCA Analysis](docs/screenshots/04-pca-analysis.png)
-
-### Eigenface Orthonormality Check ($V^T V \approx I$)
-![Eigenface Orthogonality](docs/screenshots/06-orthogonality.png)
-
-### Face Recognition Interface
-![Face Recognition](docs/screenshots/07-face-recognition.png)
-
-### Face Reconstruction (50 Components)
-![Face Reconstruction](docs/screenshots/08-face-reconstruction.png)
-
-### Top Learned Eigenfaces
-![Eigenfaces](docs/screenshots/09-eigenfaces.png)
-
-### Cumulative Explained Variance Plot
-![Explained Variance](docs/screenshots/10-explained-variance.png)
-
-### Final Performance Summary
-![Final Results](docs/screenshots/11-final-results.png)
-
----
-
 ## 💻 Installation & Setup
 
 ### Prerequisites

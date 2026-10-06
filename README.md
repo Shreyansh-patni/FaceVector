@@ -62,14 +62,6 @@ The interactive **Streamlit** dashboard provides real-time visualization of data
 **Try FaceVector live:**  
 👉 [https://facevector.streamlit.app/](https://facevector.streamlit.app/)
 
-## 🖥️ Preview
-
-<p align="center">
-  <img src="Screenshot.png" alt="FaceVector App Preview" width="100%">
-</p>
-
-## Preview
-
 ![FaceVector App Preview](Screenshot.png)
 ---
 

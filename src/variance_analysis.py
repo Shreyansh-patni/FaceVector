@@ -64,7 +64,7 @@ for k in [10, 25, 50, 100, 150, 200, 250, 300]:
 
         print(
             f"Top {k:3d} components "
-            f"→ {percentage:.2f}% variance"
+            f"-> {percentage:.2f}% variance"
         )
 
 
@@ -82,7 +82,7 @@ for threshold in [0.80, 0.90, 0.95, 0.99]:
 
     print(
         f"{threshold * 100:.0f}% variance "
-        f"→ {components_needed} components"
+        f"-> {components_needed} components"
     )
 
 

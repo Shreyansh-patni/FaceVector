@@ -136,3 +136,53 @@ plt.close()
 print(
     f"\nPlot saved to: {output_path}"
 )
+
+# ---------------------------------------
+# Plot eigenvalue spectrum
+# ---------------------------------------
+
+plt.figure(figsize=(10, 6))
+
+plt.plot(
+    range(1, len(eigenvalues) + 1),
+    eigenvalues,
+    color="purple",
+    linewidth=2
+)
+
+plt.axvline(
+    50,
+    color="red",
+    linestyle="--",
+    label="50 Components Cutoff"
+)
+
+plt.xlabel("Eigenvalue Index (k)")
+
+plt.ylabel("Eigenvalue Magnitude (λ)")
+
+plt.title(
+    "Eigenvalue Spectrum (Decay of Principal Components)"
+)
+
+plt.yscale("log")
+
+plt.grid(True, which="both", linestyle=":", alpha=0.6)
+
+plt.legend()
+
+plt.tight_layout()
+
+spectrum_output_path = "outputs/eigenvalue_spectrum.png"
+
+plt.savefig(
+    spectrum_output_path,
+    dpi=200,
+    bbox_inches="tight"
+)
+
+plt.close()
+
+print(
+    f"Plot saved to: {spectrum_output_path}"
+)

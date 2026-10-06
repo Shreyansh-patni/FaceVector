@@ -57,7 +57,7 @@ This project directly addresses the core **UE25MA242A (MFAD)** problem statement
 
 The interactive **Streamlit** dashboard provides real-time visualization of data matrices, mean face calculation, eigenface decomposition, subspace projection, recognition, and image reconstruction.
 
-![FaceVector Main Application](docs/screenshots/01-project-overview.png)
+![FaceVector Main Application]([docs/screenshots/01-project-overview.png](https://github.com/Shreyansh-patni/FaceVector/blob/main/Screenshot.png))
 
 ---
 

@@ -1,100 +1,112 @@
 import numpy as np
 
-from data_loader import load_images, compute_mean_face, center_data
-from data_loader import TRAINING_DIR
-
 
 def compute_pca(P):
     """
-    Compute eigenvalues and eigenvectors using P^T P.
+    Compute PCA using the smaller matrix P.T @ P.
 
     P shape:
-        (pixels, training_images)
+        (number_of_pixels, number_of_training_images)
 
-    Returns:
-        eigenvalues
-        eigenvectors
-        eigenfaces
+    Example:
+        (10304, 360)
+
+    The eigenvectors of P.T @ P are converted into
+    eigenfaces using:
+
+        V = P @ U
+
+    Result:
+        eigenfaces shape = (10304, 359)
     """
 
-    # ---------------------------------------
-    # Step 1: Compute the smaller covariance
-    # ---------------------------------------
+    # --------------------------------------------------------
+    # Step 1: Compute the smaller covariance-related matrix
+    # --------------------------------------------------------
 
     C = P.T @ P
 
-    print("=" * 50)
-    print("PCA / EIGENFACE CALCULATION")
-    print("=" * 50)
-
-    print(f"P shape       : {P.shape}")
-    print(f"P^T P shape   : {C.shape}")
-
-    # ---------------------------------------
-    # Step 2: Eigenvalue/eigenvector analysis
-    # ---------------------------------------
+    # --------------------------------------------------------
+    # Step 2: Eigenvalue decomposition
+    # --------------------------------------------------------
 
     eigenvalues, eigenvectors = np.linalg.eigh(C)
 
-    # ---------------------------------------
-    # Step 3: Sort eigenvalues from largest
-    # to smallest
-    # ---------------------------------------
+    # --------------------------------------------------------
+    # Step 3: Sort eigenvalues from largest to smallest
+    # --------------------------------------------------------
 
-    indices = np.argsort(eigenvalues)[::-1]
+    indices = np.argsort(
+        eigenvalues
+    )[::-1]
 
-    eigenvalues = eigenvalues[indices]
-    eigenvectors = eigenvectors[:, indices]
+    eigenvalues = eigenvalues[
+        indices
+    ]
 
-    # ---------------------------------------
-    # Step 4: Convert eigenvectors of P^T P
-    # into eigenvectors of P P^T
-    # ---------------------------------------
+    eigenvectors = eigenvectors[
+        :,
+        indices
+    ]
+
+    # --------------------------------------------------------
+    # Step 4: Remove zero / near-zero eigenvalues
+    # --------------------------------------------------------
+
+    threshold = 1e-10
+
+    valid = eigenvalues > threshold
+
+    eigenvalues = eigenvalues[
+        valid
+    ]
+
+    eigenvectors = eigenvectors[
+        :,
+        valid
+    ]
+
+    # --------------------------------------------------------
+    # Step 5: Convert eigenvectors into eigenfaces
+    #
+    # U = eigenvectors of P.T @ P
+    #
+    # V = P @ U
+    # --------------------------------------------------------
 
     eigenfaces = P @ eigenvectors
 
-    # ---------------------------------------
-    # Step 5: Normalize eigenfaces
-    # ---------------------------------------
+    # --------------------------------------------------------
+    # Step 6: Normalize eigenfaces
+    # --------------------------------------------------------
 
-    norms = np.linalg.norm(eigenfaces, axis=0)
-
-    valid = norms > 1e-10
-
-    eigenfaces = eigenfaces[:, valid]
-    eigenvalues = eigenvalues[valid]
-
-    eigenfaces = eigenfaces / np.linalg.norm(
+    norms = np.linalg.norm(
         eigenfaces,
-        axis=0,
-        keepdims=True
+        axis=0
     )
 
-    return eigenvalues, eigenfaces
+    valid_norms = norms > 1e-12
 
+    eigenfaces = eigenfaces[
+        :,
+        valid_norms
+    ]
 
-if __name__ == "__main__":
+    eigenvalues = eigenvalues[
+        valid_norms
+    ]
 
-    # Load training faces
-    X_train, y_train = load_images(TRAINING_DIR)
+    eigenfaces = (
+        eigenfaces /
+        np.linalg.norm(
+            eigenfaces,
+            axis=0,
+            keepdims=True
+        )
+    )
 
-    # Compute mean face
-    mean_face = compute_mean_face(X_train)
+    # --------------------------------------------------------
+    # Return
+    # --------------------------------------------------------
 
-    # Center the data
-    P = center_data(X_train, mean_face)
-
-    # PCA
-    eigenvalues, eigenfaces = compute_pca(P)
-
-    print("\nEigenvalues:")
-    print(eigenvalues[:10])
-
-    print("\nEigenfaces matrix shape:")
-    print(eigenfaces.shape)
-
-    print("\nLargest eigenvalue:")
-    print(eigenvalues[0])
-
-    print("\nNumber of eigenfaces:")
-    print(eigenfaces.shape[1])
+    return eigenfaces, eigenvalues

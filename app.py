@@ -44,7 +44,7 @@ def prepare_display_image(face_vector):
     """
     Convert a face vector into a valid 8-bit grayscale image.
 
-    Used for displaying normal face images.
+    Used only for visualization.
     Does not affect PCA calculations.
     """
 
@@ -66,10 +66,10 @@ def prepare_eigenface_image(eigenface):
     """
     Normalize an eigenface for visualization.
 
-    Eigenfaces contain positive and negative values around zero.
-    Directly clipping them to 0-255 makes them appear black.
+    Eigenfaces contain positive and negative values.
+    Min-max normalization makes their structure visible.
 
-    Min-max normalization is used ONLY for visualization.
+    This affects visualization only.
     """
 
     image = np.asarray(eigenface).reshape(
@@ -108,17 +108,13 @@ def run_recognition(
     training_labels
 ):
     """
-    Supports the existing recognize_face() function.
-
-    If it returns:
+    Supports recognize_face() returning either:
 
         predicted_label, distance
 
     or:
 
         predicted_label, distance, index
-
-    both formats are handled.
     """
 
     result = recognize_face(
@@ -185,6 +181,19 @@ def prepare_model():
 
 
     # --------------------------------------------------------
+    # GRAM MATRIX
+    # --------------------------------------------------------
+
+    # P has shape:
+    # 10304 × 360
+    #
+    # P.T @ P therefore has shape:
+    # 360 × 360
+
+    gram_matrix = P.T @ P
+
+
+    # --------------------------------------------------------
     # PCA
     # --------------------------------------------------------
 
@@ -221,6 +230,43 @@ def prepare_model():
 
 
     # --------------------------------------------------------
+    # SELECT PRINCIPAL COMPONENTS
+    # --------------------------------------------------------
+
+    eigenfaces_k = eigenfaces[
+        :,
+        :k
+    ]
+
+
+    # --------------------------------------------------------
+    # ORTHOGONALITY CHECK
+    # --------------------------------------------------------
+
+    orthogonality_matrix = (
+        eigenfaces_k.T
+        @
+        eigenfaces_k
+    )
+
+    identity_matrix = np.eye(k)
+
+    orthogonality_error = np.max(
+        np.abs(
+            orthogonality_matrix
+            -
+            identity_matrix
+        )
+    )
+
+    is_orthogonal = np.allclose(
+        orthogonality_matrix,
+        identity_matrix,
+        atol=1e-6
+    )
+
+
+    # --------------------------------------------------------
     # PROJECT TRAINING DATA
     # --------------------------------------------------------
 
@@ -242,16 +288,6 @@ def prepare_model():
         eigenfaces,
         k
     )
-
-
-    # --------------------------------------------------------
-    # SELECT EIGENFACES
-    # --------------------------------------------------------
-
-    eigenfaces_k = eigenfaces[
-        :,
-        :k
-    ]
 
 
     # --------------------------------------------------------
@@ -356,11 +392,21 @@ def prepare_model():
         "mean_face": mean_face,
 
         "P": P,
+        "gram_matrix": gram_matrix,
 
         "eigenfaces": eigenfaces,
         "eigenvalues": eigenvalues,
 
         "eigenfaces_k": eigenfaces_k,
+
+        "orthogonality_matrix":
+            orthogonality_matrix,
+
+        "orthogonality_error":
+            orthogonality_error,
+
+        "is_orthogonal":
+            is_orthogonal,
 
         "W_train": W_train,
         "W_test": W_test,
@@ -405,30 +451,39 @@ y_test = model["y_test"]
 mean_face = model["mean_face"]
 
 P = model["P"]
+gram_matrix = model["gram_matrix"]
 
 eigenfaces = model["eigenfaces"]
-
 eigenvalues = model["eigenvalues"]
 
 eigenfaces_k = model["eigenfaces_k"]
 
-W_train = model["W_train"]
+orthogonality_matrix = (
+    model["orthogonality_matrix"]
+)
 
+orthogonality_error = (
+    model["orthogonality_error"]
+)
+
+is_orthogonal = (
+    model["is_orthogonal"]
+)
+
+W_train = model["W_train"]
 W_test = model["W_test"]
 
 predictions = model["predictions"]
-
 distances = model["distances"]
 
 correct = model["correct"]
-
 accuracy = model["accuracy"]
 
 k = model["k"]
 
-cumulative_variance = model[
-    "cumulative_variance"
-]
+cumulative_variance = (
+    model["cumulative_variance"]
+)
 
 
 # ============================================================
@@ -506,8 +561,9 @@ st.header(
 )
 
 st.write(
-    "Each face image is converted into a column vector. "
-    "All face vectors are combined into a data matrix."
+    "Each grayscale face image is converted into a "
+    "column vector and the vectors are combined "
+    "to form the face data matrix."
 )
 
 
@@ -552,6 +608,61 @@ with col2:
 
 
 # ============================================================
+# MEAN FACE
+# ============================================================
+
+st.markdown("---")
+
+st.header(
+    "🖼️ Mean Face"
+)
+
+st.write(
+    "The mean face is calculated by averaging "
+    "all training face vectors."
+)
+
+
+col1, col2, col3 = st.columns(3)
+
+
+with col1:
+
+    st.image(
+        prepare_display_image(
+            mean_face
+        ),
+        caption="Mean Face",
+        width=250
+    )
+
+
+with col2:
+
+    st.code(
+        "μ = (1/N) Σ Xᵢ"
+    )
+
+    st.write(
+        "The mean face provides the reference "
+        "for centering the training data."
+    )
+
+
+with col3:
+
+    st.metric(
+        "Mean Face Dimensions",
+        f"{mean_face.shape[0]:,}"
+    )
+
+    st.write(
+        "Each pixel represents the average "
+        "intensity at that position."
+    )
+
+
+# ============================================================
 # MATHEMATICAL PIPELINE
 # ============================================================
 
@@ -565,12 +676,74 @@ st.markdown(
     """
 **Image → Vector → Mean Face → Mean Centering → PᵀP
 → Eigenvalues & Eigenvectors → Eigenfaces → Projection
-→ Euclidean Distance → Face Recognition**
-
-The smaller matrix **PᵀP** is used instead of the much
-larger **PPᵀ** because the image dimension is much larger
-than the number of training images.
+→ Euclidean Distance → Face Recognition → Reconstruction**
 """
+)
+
+st.info(
+    "The smaller PᵀP matrix is used because it is "
+    "much smaller than PPᵀ for this dataset."
+)
+
+
+# ============================================================
+# CENTERING AND GRAM MATRIX
+# ============================================================
+
+st.markdown("---")
+
+st.header(
+    "🔢 Mean Centering & PᵀP"
+)
+
+col1, col2, col3 = st.columns(3)
+
+
+with col1:
+
+    st.metric(
+        "Centered Matrix P",
+        f"{P.shape[0]:,} × {P.shape[1]}"
+    )
+
+
+with col2:
+
+    st.metric(
+        "PᵀP Matrix",
+        f"{gram_matrix.shape[0]} × "
+        f"{gram_matrix.shape[1]}"
+    )
+
+
+with col3:
+
+    st.metric(
+        "PPᵀ Would Be",
+        f"{P.shape[0]:,} × "
+        f"{P.shape[0]:,}"
+    )
+
+
+st.code(
+    "P = X - μ\n"
+    "G = PᵀP"
+)
+
+
+st.write(
+    f"Our centered matrix contains "
+    f"{P.shape[0]:,} pixel dimensions and "
+    f"{P.shape[1]} training images."
+)
+
+st.write(
+    f"Instead of computing a "
+    f"{P.shape[0]:,} × {P.shape[0]:,} "
+    f"matrix, we solve the eigenproblem on "
+    f"the smaller "
+    f"{gram_matrix.shape[0]} × "
+    f"{gram_matrix.shape[1]} matrix."
 )
 
 
@@ -625,6 +798,167 @@ if len(
         f"approximately **{variance_retained:.2f}%** "
         f"of the variance."
     )
+
+
+# ============================================================
+# EIGENVALUE ANALYSIS
+# ============================================================
+
+st.markdown("---")
+
+st.header(
+    "📊 Eigenvalue Analysis"
+)
+
+st.write(
+    "Eigenvalues indicate the amount of variation "
+    "captured by the corresponding principal directions."
+)
+
+
+num_eigenvalues = min(
+    10,
+    len(eigenvalues)
+)
+
+
+eigenvalue_data = []
+
+for i in range(
+    num_eigenvalues
+):
+
+    eigenvalue_data.append(
+        {
+            "Component":
+                i + 1,
+
+            "Eigenvalue":
+                f"{eigenvalues[i]:.4f}"
+        }
+    )
+
+
+st.dataframe(
+    eigenvalue_data,
+    use_container_width=True,
+    hide_index=True
+)
+
+
+# Eigenvalue spectrum
+
+positive_values = eigenvalues[
+    eigenvalues > 1e-12
+]
+
+
+if len(
+    positive_values
+) > 0:
+
+    components_all = np.arange(
+        1,
+        len(positive_values) + 1
+    )
+
+
+    fig_eigen, ax_eigen = plt.subplots(
+        figsize=(10, 5)
+    )
+
+
+    ax_eigen.plot(
+        components_all,
+        positive_values
+    )
+
+
+    ax_eigen.set_xlabel(
+        "Principal Component"
+    )
+
+
+    ax_eigen.set_ylabel(
+        "Eigenvalue"
+    )
+
+
+    ax_eigen.set_title(
+        "Eigenvalue Spectrum"
+    )
+
+
+    ax_eigen.grid(
+        True,
+        alpha=0.3
+    )
+
+
+    st.pyplot(
+        fig_eigen,
+        clear_figure=True
+    )
+
+
+# ============================================================
+# ORTHOGONALITY
+# ============================================================
+
+st.markdown("---")
+
+st.header(
+    "📐 Eigenface Orthogonality"
+)
+
+st.write(
+    "Because the selected eigenfaces are normalized, "
+    "their dot products should form an identity matrix."
+)
+
+
+col1, col2, col3 = st.columns(3)
+
+
+with col1:
+
+    st.metric(
+        "Eigenfaces Checked",
+        k
+    )
+
+
+with col2:
+
+    st.metric(
+        "Maximum Deviation",
+        f"{orthogonality_error:.10f}"
+    )
+
+
+with col3:
+
+    if is_orthogonal:
+
+        st.success(
+            "✓ Approximately Orthonormal"
+        )
+
+    else:
+
+        st.error(
+            "✗ Orthogonality Check Failed"
+        )
+
+
+st.code(
+    "VᵀV ≈ I"
+)
+
+st.write(
+    "The maximum deviation measures how far "
+    "the computed VᵀV matrix is from the identity matrix."
+)
 
 
 # ============================================================
@@ -750,11 +1084,19 @@ with col3:
     )
 
     st.write(
-        "Dimensionality reduction"
+        "Query projection shape"
     )
 
     st.code(
-        f"{X_test.shape[0]:,} → {k}"
+        f"({k},)"
+    )
+
+    st.write(
+        "Training PCA shape"
+    )
+
+    st.code(
+        f"{W_train.shape}"
     )
 
 
@@ -774,16 +1116,11 @@ st.write(
 )
 
 
-# PCA coefficients
 W_selected = W_test[
     :,
     selected_index
 ]
 
-
-# Reconstruction:
-#
-# X̂ = mean face + eigenfaces × PCA coefficients
 
 reconstructed = (
     mean_face
@@ -847,13 +1184,13 @@ st.header(
 )
 
 st.write(
-    "Eigenfaces are the principal components learned "
-    "from the training face dataset."
+    "Eigenfaces are the principal components "
+    "learned from the training face dataset."
 )
 
 st.info(
-    "The eigenfaces below are normalized only for "
-    "visualization. The original PCA values are unchanged."
+    "Eigenfaces are normalized only for visualization. "
+    "The original PCA values remain unchanged."
 )
 
 
@@ -1083,7 +1420,7 @@ st.dataframe(
 
 
 # ============================================================
-# PROJECT SUMMARY
+# FINAL PROJECT SUMMARY
 # ============================================================
 
 st.markdown("---")
@@ -1105,21 +1442,30 @@ with summary_col1:
 - Testing images: **{X_test.shape[1]}**
 - Image size: **{IMAGE_WIDTH} × {IMAGE_HEIGHT}**
 - Original dimension: **{X_train.shape[0]:,}**
+- Training matrix: **{X_train.shape}**
+- Testing matrix: **{X_test.shape}**
 """
     )
 
 
 with summary_col2:
 
+    variance_final = (
+        cumulative_variance[-1] * 100
+        if len(cumulative_variance) > 0
+        else 0
+    )
+
     st.markdown(
         f"""
 **PCA & Recognition**
 
-- Principal components: **{k}**
+- PCA components: **{k}**
 - Reduced dimension: **{k}**
-- Variance retained: **{cumulative_variance[-1] * 100:.2f}%**
+- Variance retained: **{variance_final:.2f}%**
 - Recognition accuracy: **{accuracy * 100:.2f}%**
 - Correct predictions: **{correct}/{len(y_test)}**
+- Orthogonality: **{"Verified" if is_orthogonal else "Not verified"}**
 """
     )
 

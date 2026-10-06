@@ -56,7 +56,7 @@ print(f"Centered data : {P.shape}")
 # PCA
 # ---------------------------------------
 
-eigenvalues, eigenfaces = compute_pca(P)
+eigenfaces, eigenvalues = compute_pca(P)
 
 print(f"Eigenfaces    : {eigenfaces.shape}")
 
